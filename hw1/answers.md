@@ -45,17 +45,158 @@ _Z3fooii:
 	push	rbp	#    # set the base pointer to this function's context
 	mov	rbp, rsp	#,  ; <Saves the stack pointer to base pointer
 	mov	DWORD PTR -4[rbp], edi	# a, a < Pops the edi to the same location where "a" is - I am not really sure why?
-	mov	DWORD PTR -8[rbp], esi	# b, b < Pops the edi to the same location where "a" is - I am not really sure why?
+	mov	DWORD PTR -8[rbp], esi	# b, b < Pops the edi to the same location where "b" is - I am not really sure why?
 # calling_conv.cc:3:     return a + b;
 	mov	edx, DWORD PTR -4[rbp]	# tmp84, a < Stores the a and b to the temporary variables
 	mov	eax, DWORD PTR -8[rbp]	# tmp85, b
 	add	eax, edx	# _3, tmp84
-    # calling_conv.cc:4: }
+	# calling_conv.cc:4: }
 	pop	rbp	# < store the base pointer back to the main function
 	ret	
 ```
 
 
 (Calling convention wiki)[https://wiki.osdev.org/Calling_Conventions]
+(Function prologue and epilogue)[https://en.wikipedia.org/wiki/Function_prologue_and_epilogue]
+(Some info about function calling convention)[https://aaronbloomfield.github.io/pdr/book/x86-32bit-ccc-chapter.pdf]
+(Function epilogue/prologue)[https://www.cs.utexas.edu/~novak/codegen.pdf]
+
+#
+# What are the generic parts of the encoding of an x86 instruction? Where do you find this information? 
+
+> x86(32 bit) Instruction can be encoded with at most 15bytes there are following components
+
+1. Legacy prefixes (1-4 bytes, optional)
+2. Opcode with prefixes (1-4 bytes, required)
+3. ModR/M (1 byte, if required)
+4. SIB (1 byte, if required)
+5. Diplacement (1, 2, 4 or 8 bytes, if required)
+6. Immediate (1, 2, 4 or 8 bytes, if required) 
 
 
+(x86 Instruction Encoding)[https://wiki.osdev.org/X86-64_Instruction_Encoding]
+
+## 2. Prefix opcode byte (4bytes)
+	Prefix opcode allowes multiple opcodes to be available and it also allows you to have non-supported opcodes.	
+	They're usually the first 1 bytes of the encoded instruction.
+	-----------------
+	|1|1|1|1|1|1|1|1| .....
+	-----------------
+	this part of the encoding affects the operation of the instruction. For instance: 00000000 means it's register to register addition.
+	the last two bits of the bytes are named d and s
+	-----------------
+	|1|1|1|1|1|1|d|s| .....
+	-----------------
+	d = 0 (if adding register to memory)
+	d = 1 (if adding memory to register)
+	s = 0 (if adding 8bit operand)
+	s = 1 (if adding 16 bit or 32 bit operand)
+
+## 3. ModR/M (1 byte)
+	It controls the addressing mode and instruction operand size.
+	7 6 5 4 3 2 1 0
+	---------------
+	| | | | | | | |
+	---------------
+	^_^ ^___^ ^___^
+	MOD  REG   R/M
+
+	MOD:
+		00 -> register indirect addressing mode
+		01 -> one byte signed displacement (follows addressing mode bytes)
+		10 -> (four byte signed displacement)
+		11 -> (register addressing mode)
+	REG: 4-32bit registers
+		000 - al,ax,eax
+		001 - cl,dx,edx
+		010 - dl,dx,edx
+		011 - bl,bx,ebx
+		100 - ah,sp,esp
+		101 - ch,bp,ebp
+		110 - dh,ci,esi
+		111 - bh,di,edi
+	R/M: (in more details)[https://www.plantation-productions.com/Webster/www.artofasm.com/Windows/HTML/ISA.html]
+
+
+## 4. SIB (Scale,Index,Base)
+
+	Why do we need this?! you might ask. Well you need this part of the encoding due to instruction form such as this: [ebx + edx * 4]
+
+	7 6 5 4 3 2 1 0
+	-----------------
+	| | | | | | | | |
+	-----------------
+	^_^ ^___^ ^____^
+	scale index base
+	|
+	Scale: 
+		00 index*1  000
+		01 index*2
+		10 index*3
+		11 index*4
+	Index:
+		000 eax
+		001 ecx
+		010 edx
+		011 ebx
+		100 illegal
+		101 ebp
+		110 esi
+		111 edi
+	Base:
+		-|- everything is the same as Index except from
+		100 esp
+		101 displacement only if MOD=00 EBP if MOD=01 or MOD=10
+		110 esi
+		111 edi
+
+## 5. Displacement
+	You just put the displacement value at the end of these previous bytes :-)
+
+## 6. Immediate
+	When you implement ADD(or any other operations) using immediate value instead of register there are three differences
+	1. The opcode H.O will be 1 instead of 0 (check the #2 Header!) however this does not tell CPU it should execute ADD operation!
+	2. There is no direction (d) bit in the because well obviously it's an intermediate value!
+	3. There is no REG field in Mod-Reg-R/M section. It should have "000" in corresponding fields
+
+
+Example:
+	
+	ADD(AL,CL)
+	In hex:
+	0x0  0x0 0xc 0x01
+	In Binary
+	0000|0000|1100|0001
+
+		^ ^^^ ^_^   ^_^
+		d s|MOD  al register  cl register
+
+I wrote this assemby code to demonstrate the encoding
+
+``` nasm
+global _start
+section .text
+_start:
+    add al, cl  
+```
+
+After assembling with nasm: nasm -f elf32 encoding1.s
+
+and disassembling it with: objdump -d encoding1.o  
+
+I get this result:
+
+```
+encoding1.o:     file format elf32-i386
+
+
+Disassembly of section .text:
+
+00000000 <_start>:
+   0:   00 c8                   add    %cl,%al
+        ^___^
+		Here you can see the encoded assembly in hex. But not sure why 0x01 is dropped though?!
+
+```
+
+Reference: https://www.plantation-productions.com/Webster/www.artofasm.com/Windows/HTML/ISA.html#1028108
