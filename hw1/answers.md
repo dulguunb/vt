@@ -33,7 +33,7 @@
 
 
 ```bash
-gcc -S -fverbose-asm -masm=intel -fno-asynchronous-unwind-tables -O0 calling_conv.cc    
+gcc -S -fverbose-asm -masm=intel -fno-asynchronous-unwind-tables -O0 calling_conv.cc
 ```
 
 > I disassembled calling_conv.c to calling_conv.s. I noticed that it doesn't push the arguments to the stack rather it uses esi and edi registers. I think it's a result of some optimazation. However the usage of stack is still valid: 
@@ -156,7 +156,7 @@ _Z3fooii:
 ## 6. Immediate
 	When you implement ADD(or any other operations) using immediate value instead of register there are three differences
 	1. The opcode H.O will be 1 instead of 0 (check the #2 Header!) however this does not tell CPU it should execute ADD operation!
-	2. There is no direction (d) bit in the because well obviously it's an intermediate value!
+	2. There is no direction (d) bit in the because well obviously it's an immediate value!
 	3. There is no REG field in Mod-Reg-R/M section. It should have "000" in corresponding fields
 
 
@@ -195,8 +195,56 @@ Disassembly of section .text:
 00000000 <_start>:
    0:   00 c8                   add    %cl,%al
         ^___^
-		Here you can see the encoded assembly in hex. But not sure why 0x01 is dropped though?!
+        Here you can see the encoded assembly in hex. Not sure why 0x01 is dropped though?!
 
 ```
 
 Reference: https://www.plantation-productions.com/Webster/www.artofasm.com/Windows/HTML/ISA.html#1028108
+
+
+# What is the benefit of a pipeline in CPU core design? What are pipeline conflicts?
+
+Pipelining is the process of accumulating instruction from the processor through pipeline. It allows storing and executing instructions in an orderly process.
+
+Pipeline allows you to execute multiple instructions simultanously. However it comes with some issues.
+Advnatages:
+1. The cycle time of the processesor is reduced
+2. It increases the throughput of the system
+3. It makes the system reliable
+
+Conflicts:
+1. Timing Variations: All stages cannot take same amount of time. This problem generally occurs in instruction processing where different instructions have different operand requirements and thus different processing time.
+2. Data Hazards: When several instructions are in partial execution, and if they reference same data then the problem arises. We must ensure that next instruction does not attempt to access data before the current instruction because this will lead to incorrect results.
+3. Branching: In order to fetch and execute the next instruction, we must know what that instruction is. If the present instruction is conditional branch, and its result will lead us to the next instruction, then the next instruction may not be known until the current one is processed
+4. Interrupts: Interrupts set unwanted instruction into the instruction stream. Interrupts effect the execution of instruction.
+5. Data dependency: It arises when an instruction depends upon the result of a previous instruction but this result is not yet available.
+
+# When are jumps/calls slow? What does “slow” mean? 
+
+
+1. Calls command can be slow because if it tries to access syscalls it needs to do context switching. Therefore it needs to save the ESP,EBP and all of the registers and start the new process in a different context and fetch back the result and continue the previous process.
+2. It also takes 20 CPU cycles to evaluate jump/calls. Because the pipeline executes multiple instructions simultanously therefore if there is an occurance of jump/call it needs to branch out to a different instruction sets. There is however a something called branch predictor unit in modern CPU. The modern CPU tries to predict the future and figure out the branch target before branch is actually fully executed. This happens before the decoder part of the pipeline.
+
+https://blog.cloudflare.com/branch-predictor/
+https://xania.org/201602/bpu-part-three
+http://www.ece.uah.edu/~milenka/docs/VladimirUzelac.thesis.pdf
+
+
+# What belongs to the state of a Linux process? Examples? How to access it?
+
+Linux processes have 5 states
+1. Running&Runnable
+2. Interruptable_sleep
+3. uninterruptable_sleep
+4. stopped
+5. zombie
+
+Depending on what signal you sent to the process it can go from Running to different states. For instance if you send SIGSTOP (ctrl+x) it will put the process into stopped. To start the process again you need to send SIGCONT. If the program calls exit() then it will go to zombie state. With top command you can check the state of the process
+
+* R – RUNNING/RUNNABLE
+* S – INTERRRUPTABLE_SLEEP
+* D – UNINTERRUPTABLE_SLEEP
+* T – STOPPED
+* Z – ZOMBIE
+
+For example: ``` 3032 dulguun   20   0 5498548 799664 249936 S   6.3   4.9 137:01.28 firefox ``` This process is on uniterruptable_sleep mode
