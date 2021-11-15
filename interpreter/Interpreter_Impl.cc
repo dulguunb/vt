@@ -51,7 +51,7 @@ void Interpreter_Impl::startCycle(){
     }
     break;
     case 0x3:{
-      A-=1;
+      A--;
       IP++;
     }
     break;
@@ -63,7 +63,7 @@ void Interpreter_Impl::startCycle(){
     case 0x5:{
       L--;
       if (L >= 0){
-       if(IP >= 7){
+       if(IP >= 6){
           IP-=6;
         }
         else{
