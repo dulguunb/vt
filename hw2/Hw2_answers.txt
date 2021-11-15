@@ -1,0 +1,62 @@
+Answer3:
+Scenario 1 took 640668[ns] to finish measured by the C++ chrono library and it took 2.160 GHz cycles according to perf
+Scenario 2 took 1347501[ns] to finish measured by the C++ chrono library and it took 0.536 GHz cycles according to perf
+Scenario 3 took 27103557[ns] to finish measured by the C++ chrono library and it took 3.294 GHz cycles according to perf
+Scenario 4 took 19410153[ns] to finish measured by the C++ chrono library and it took 3.177 GHz cycles according to perf
+Scenario 5 took 33272191[ns] to finish measured by the C++ chrono library and it took 3.322 GHz cycles according to perf
+Scenario 6 took 220230541[ns] to finish measured by the C++ chrono library and it took  3.301 GHz cycles according to perf
+Scenario 7 took 46565257[ns] to finish measured by the C++ chrono library and it took 1.953 GHz GHz cycles according to perf
+Scenario 8 took 64101363[ns] to finish measured by the C++ chrono library and it took 2.128 GHz GHz GHz cycles according to perf
+Answer4:
+I would assume the hardware clock would be the good resource for the time measurement
+Answer5:
+
+Answer6:
+I have repeated the scenario 1 for 100 times in the code. At the iteration 0 it took: 313042[ns] to finish
+and after that the seconds became less namely:
+Iteration: 1: 312[ns]
+Iteration: 2: 88[ns]
+and at the end of the iteration, I get this results:
+Iteration: 98: 118[ns]
+Iteration: 99: 86[ns]
+So I would assume the average time is around 86 to 88.
+
+Answer7:
+
+The scenario 2 gave me this result. It says it missed 3.85% of the branches.
+Performance counter stats for './main.o 2':
+              6.30 msec task-clock:u              #    0.818 CPUs utilized          
+                 0      context-switches:u        #    0.000 /sec                   
+                 0      cpu-migrations:u          #    0.000 /sec                   
+               128      page-faults:u             #   20.317 K/sec                  
+         3,374,969      cycles:u                  #    0.536 GHz                    
+         4,632,991      instructions:u            #    1.37  insn per cycle         
+           708,208      branches:u                #  112.410 M/sec                  
+            27,279      branch-misses:u           #    3.85% of all branches        
+
+       0.007705823 seconds time elapsed
+
+       0.003752000 seconds user
+       0.003632000 seconds sys
+
+On the other hand the Scenario 1 gave me: 
+
+Performance counter stats for './main.o 1':
+
+              1.25 msec task-clock:u              #    0.777 CPUs utilized          
+                 0      context-switches:u        #    0.000 /sec                   
+                 0      cpu-migrations:u          #    0.000 /sec                   
+               131      page-faults:u             #  104.861 K/sec                  
+         2,698,139      cycles:u                  #    2.160 GHz                    
+         4,642,100      instructions:u            #    1.72  insn per cycle         
+           708,050      branches:u                #  566.771 M/sec                  
+            13,668      branch-misses:u           #    1.93% of all branches        
+
+       0.001606889 seconds time elapsed
+
+       0.001698000 seconds user
+       0.000000000 seconds sys
+
+It has 1.93 percent branch miss. So overall there was about 2% difference.
+The penalty was that the scenario 2 used 0.536 GHz cycles and the scenario 1 used  2.160 GHz cycles.
+Therefore the cycle difference is about 1.624Ghz, which is quite significent.
